@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR
 from data import ShapeNetPart
-from model import DGCNN_partseg
+from model import Mymodel_seg
 import numpy as np
 from torch.utils.data import DataLoader
 from util import cal_loss, IOStream
@@ -152,8 +152,8 @@ def train(args, io):
     #Try to load models
     seg_num_all = train_loader.dataset.seg_num_all
     seg_start_index = train_loader.dataset.seg_start_index
-    if args.model == 'dgcnn':
-        model = DGCNN_partseg(args, seg_num_all).to(device)
+    if args.model == 'Mymodel_seg':
+        model = Mymodel_seg(args, seg_num_all).to(device)
     else:
         raise Exception("Not implemented")
     print(str(model))
@@ -297,8 +297,8 @@ def test(args, io):
     seg_num_all = test_loader.dataset.seg_num_all
     seg_start_index = test_loader.dataset.seg_start_index
     partseg_colors = test_loader.dataset.partseg_colors
-    if args.model == 'dgcnn':
-        model = DGCNN_partseg(args, seg_num_all).to(device)
+    if args.model == 'Mymodel_seg':
+        model = Mymodel_seg(args, seg_num_all).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -354,9 +354,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Point Cloud Part Segmentation')
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
-    parser.add_argument('--model', type=str, default='dgcnn', metavar='N',
-                        choices=['dgcnn'],
-                        help='Model to use, [dgcnn]')
+    parser.add_argument('--model', type=str, default='Mymodel_seg', metavar='N',
+                        choices=['Mymodel_seg'],
+                        help='Model to use, [Mymodel_seg]')
     parser.add_argument('--dataset', type=str, default='shapenetpart', metavar='N',
                         choices=['shapenetpart'])
     parser.add_argument('--class_choice', type=str, default=None, metavar='N',
@@ -392,6 +392,8 @@ if __name__ == "__main__":
                         help='Dimension of embeddings')
     parser.add_argument('--k', type=int, default=40, metavar='N',
                         help='Num of nearest neighbors to use')
+    parser.add_argument('--heads', type=int, default=4, metavar='N',
+                        help='number of heads')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
     parser.add_argument('--visu', type=str, default='',

@@ -20,7 +20,7 @@ import h5py
 import numpy as np
 import torch
 import json
-import cv2
+#import cv2
 from torch.utils.data import Dataset
 
 
@@ -164,7 +164,7 @@ def load_data_semseg(partition, test_area):
         all_seg = seg_batches[test_idxs, ...]
     return all_data, all_seg
 
-
+'''
 def load_color_partseg():
     colors = []
     labels = []
@@ -249,7 +249,7 @@ def load_color_semseg():
         row_index = row_index + int(color_size * 1.3)
         if (row_index >= img_size):
             break  
-    
+'''
 
 def translate_pointcloud(pointcloud):
     xyz1 = np.random.uniform(low=2./3., high=3./2., size=[3])
@@ -301,7 +301,7 @@ class ShapeNetPart(Dataset):
         self.num_points = num_points
         self.partition = partition        
         self.class_choice = class_choice
-        self.partseg_colors = load_color_partseg()
+        #self.partseg_colors = load_color_partseg()
         
         if self.class_choice != None:
             id_choice = self.cat2id[self.class_choice]
@@ -337,7 +337,7 @@ class S3DIS(Dataset):
         self.data, self.seg = load_data_semseg(partition, test_area)
         self.num_points = num_points
         self.partition = partition    
-        self.semseg_colors = load_color_semseg()
+        #self.semseg_colors = load_color_semseg()
 
     def __getitem__(self, item):
         pointcloud = self.data[item][:self.num_points]

@@ -20,7 +20,7 @@ from data import ShapeNetPart
 from model import Mymodel_seg
 import numpy as np
 from torch.utils.data import DataLoader
-from util import cal_loss, IOStream
+from util import cal_loss, IOStream,save_loss
 import sklearn.metrics as metrics
 from plyfile import PlyData, PlyElement
 
@@ -146,7 +146,8 @@ def train(args, io):
     train_loader = DataLoader(train_dataset, num_workers=8, batch_size=args.batch_size, shuffle=True, drop_last=drop_last)
     test_loader = DataLoader(ShapeNetPart(partition='test', num_points=args.num_points, class_choice=args.class_choice), 
                             num_workers=8, batch_size=args.test_batch_size, shuffle=True, drop_last=False)
-    
+    print('num of train data:', len(train_loader))
+    print('num of test data:', len(test_loader))
     device = torch.device("cuda" if args.cuda else "cpu")
 
     #Try to load models
@@ -175,6 +176,18 @@ def train(args, io):
 
     criterion = cal_loss
 
+    train_data = {
+        'loss': [],
+        'average_accuracy': [],
+        'weighted_accuracy': [],
+        "iou":[]
+    }
+    test_data = {
+        'loss': [],
+        'average_accuracy': [],
+        'weighted_accuracy': [],
+        "iou":[]
+    }
     best_test_iou = 0
     for epoch in range(args.epochs):
         ####################
@@ -235,6 +248,10 @@ def train(args, io):
                                                                                                   avg_per_class_acc,
                                                                                                   np.mean(train_ious))
         io.cprint(outstr)
+        train_data['loss'].append(train_loss*1.0/count)
+        train_data['average_accuracy'].append(train_acc)
+        train_data['weighted_accuracy'].append(avg_per_class_acc)
+        train_data['iou'].append(np.mean(train_ious))
 
         ####################
         # Test
@@ -282,11 +299,22 @@ def train(args, io):
                                                                                               test_acc,
                                                                                               avg_per_class_acc,
                                                                                               np.mean(test_ious))
+        test_data['loss'].append(test_loss * 1.0 / count)
+        test_data['average_accuracy'].append(test_acc)
+        test_data['weighted_accuracy'].append(avg_per_class_acc)
+        test_data['iou'].append(np.mean(test_ious))
         io.cprint(outstr)
         if np.mean(test_ious) >= best_test_iou:
             best_test_iou = np.mean(test_ious)
             torch.save(model.state_dict(), 'outputs/%s/models/model.t7' % args.exp_name)
 
+        save_loss(args.exp_name,
+                  [train_data['loss'], train_data['average_accuracy'], train_data['weighted_accuracy'],
+                   train_data['iou']],
+                  [test_data['loss'], test_data['average_accuracy'], test_data['weighted_accuracy'], test_data['iou']],
+                  epoch + 1
+                  )
+        io.cprint(('******************************'))
 
 def test(args, io):
     test_loader = DataLoader(ShapeNetPart(partition='test', num_points=args.num_points, class_choice=args.class_choice),

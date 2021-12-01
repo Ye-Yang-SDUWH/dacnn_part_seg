@@ -29,8 +29,10 @@ def get_graph_feature(x, k=20, idx=None, dim9=False):
             idx = knn(x, k=k)   # (batch_size, num_points, k)
         else:
             idx = knn(x[:, 6:], k=k)
-    device = torch.device('cuda')
-
+    if x.is_cuda:
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     idx_base = torch.arange(0, batch_size, device=device).view(-1, 1, 1)*num_points
 
     idx = idx + idx_base
@@ -56,7 +58,10 @@ def attention(x, k=40, idx=None):
     x = x.view(batch_size, -1, num_points)
     if idx is None:
         idx = knn(x, k=k, no_loop=True)  # (batch_size, num_points, k)
-    device = torch.device('cuda')
+    if x.is_cuda:
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
 
     idx_base = torch.arange(0, batch_size, device=device).view(-1, 1, 1) * num_points
 

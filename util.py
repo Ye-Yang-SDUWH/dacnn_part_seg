@@ -50,7 +50,7 @@ class IOStream():
 def save_loss(exp_name, train_list, test_list, epoch):
     h = len(train_list)
     fig = plt.figure(figsize=(20, 20))
-    loss_name = ["loss", "ave_acc", "weighted_acc"]
+    loss_name = ["loss", "ave_acc", "weighted_acc",'iou']
     for i in range(h):
         ax = fig.add_subplot(h,2, 2 * i + 1)
         ax.plot(range(epoch), train_list[i])

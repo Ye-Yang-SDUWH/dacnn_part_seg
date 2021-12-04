@@ -157,10 +157,13 @@ def train(args, io):
         model = Mymodel_seg(args, seg_num_all).to(device)
     else:
         raise Exception("Not implemented")
-    print(str(model))
-
-    model = nn.DataParallel(model)
-    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    if args.load_model!='':
+        model.load_state_dict(args.load_model)
+        print('load model:', args.load_model)
+    #print(str(model))
+    if args.cuda:
+        model = nn.DataParallel(model)
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
 
     if args.use_sgd:
         print("Use SGD")
@@ -309,8 +312,7 @@ def train(args, io):
             torch.save(model.state_dict(), 'outputs/%s/models/model.t7' % args.exp_name)
 
         save_loss(args.exp_name,
-                  [train_data['loss'], train_data['average_accuracy'], train_data['weighted_accuracy'],
-                   train_data['iou']],
+                  [train_data['loss'], train_data['average_accuracy'], train_data['weighted_accuracy'], train_data['iou']],
                   [test_data['loss'], test_data['average_accuracy'], test_data['weighted_accuracy'], test_data['iou']],
                   epoch + 1
                   )
@@ -424,6 +426,8 @@ if __name__ == "__main__":
                         help='number of heads')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Pretrained model path')
+    parser.add_argument('--load_model', type=str, default='', metavar='N',
+                        help='continue to train')
     parser.add_argument('--visu', type=str, default='',
                         help='visualize the model')
     parser.add_argument('--visu_format', type=str, default='ply',

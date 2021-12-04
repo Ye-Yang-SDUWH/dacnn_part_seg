@@ -157,9 +157,7 @@ def train(args, io):
         model = Mymodel_seg(args, seg_num_all).to(device)
     else:
         raise Exception("Not implemented")
-    if args.load_model!='':
-        model.load_state_dict(args.load_model)
-        print('load model:', args.load_model)
+
     #print(str(model))
     if args.cuda:
         model = nn.DataParallel(model)
@@ -171,7 +169,11 @@ def train(args, io):
     else:
         print("Use Adam")
         opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-
+    if args.load_model != '':
+        checkpoint = torch.load(args.load_model)
+        model.load_state_dict(checkpoint)
+        opt = optim.SGD(model.parameters(), lr=args.lr*10, momentum=args.momentum, weight_decay=1e-4)
+        print('load model:', args.load_model)
     if args.scheduler == 'cos':
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=1e-3)
     elif args.scheduler == 'step':

@@ -154,7 +154,7 @@ def train(args, io):
     seg_num_all = train_loader.dataset.seg_num_all
     seg_start_index = train_loader.dataset.seg_start_index
     if args.model == 'Mymodel_seg':
-        model = Mymodel_seg(args, seg_num_all).to(device)
+        model = Mymodel_specseg(args, seg_num_all).to(device)
     else:
         raise Exception("Not implemented")
 
@@ -339,7 +339,7 @@ def test(args, io):
     seg_start_index = test_loader.dataset.seg_start_index
     partseg_colors = test_loader.dataset.partseg_colors
     if args.model == 'Mymodel_seg':
-        model = Mymodel_seg(args, seg_num_all).to(device)
+        model = Mymodel_specseg(args, seg_num_all).to(device)
     else:
         raise Exception("Not implemented")
 

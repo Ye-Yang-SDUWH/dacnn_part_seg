@@ -167,8 +167,8 @@ def train(args, io):
         print("Use SGD")
         opt = optim.SGD(model.parameters(), lr=args.lr*100, momentum=args.momentum, weight_decay=1e-4)
     else:
-        print("Use Adam")
-        opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+        print("Use AdamW")
+        opt = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     if args.load_model != '':
         checkpoint = torch.load(args.load_model)
         model.load_state_dict(checkpoint)

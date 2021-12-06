@@ -517,13 +517,13 @@ class Mymodel_specseg(nn.Module):
                                     nn.LeakyReLU(negative_slope=0.2))
         self.conv11 = nn.Conv1d(128, self.seg_num_all, kernel_size=1, bias=False)
 
-        device = torch.device('cuda') if args.cuda else torch.device('cpu')
+        #device = torch.device('cuda') if args.cuda else torch.device('cpu')
         self.k_cluster = args.k_cluster
         self.temperature = args.temperature
         # init_clustering = torch.normal(0, 1/ np.sqrt(args.num_points), (args.num_points, args.k_cluster), requires_grad=True)
         # self.clustering = nn.Parameter(init_clustering)
         self.gen_clustering = nn.Conv1d(args.emb_dims, self.k_cluster, kernel_size=1)
-        self.identity_mat = torch.eye(self.k_cluster, device=device) / np.sqrt(self.k_cluster)
+        self.identity_mat = torch.eye(self.k_cluster) / np.sqrt(self.k_cluster)
 
     def spectral(self, x):
         inner = -2*torch.matmul(x.transpose(2, 1), x)

@@ -459,6 +459,145 @@ class Mymodel_seg(nn.Module):
         return x
 
 
+class Mymodel_specseg(nn.Module):
+    def __init__(self, args, seg_num_all):
+        super(Mymodel_specseg,self).__init__()
+        self.args = args
+        self.seg_num_all = seg_num_all
+        self.k = args.k
+        self.transform_net = Transform_Net(args)
+        self.atten_pooling = Attentive_Pooling(args)
+
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.bn4 = nn.BatchNorm1d(64)
+        self.bn5 = nn.BatchNorm1d(64)
+        self.bn6 = nn.BatchNorm1d(args.emb_dims)
+        self.atten_bn = nn.BatchNorm1d(args.emb_dims)
+        self.bn7 = nn.BatchNorm1d(64)
+        self.bn8 = nn.BatchNorm1d(256)
+        self.bn9 = nn.BatchNorm1d(256)
+        self.bn10 = nn.BatchNorm1d(128)
+
+        self.conv1 = nn.Sequential(nn.Conv1d(6, 64, kernel_size=1, bias=False),
+                                   self.bn1,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv2 = nn.Sequential(nn.Conv1d(64, 64, kernel_size=1, bias=False),
+                                   self.bn2,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv3 = nn.Sequential(nn.Conv1d(64 * 2, 64, kernel_size=1, bias=False),
+                                   self.bn3,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv4 = nn.Sequential(nn.Conv1d(64, 64, kernel_size=1, bias=False),
+                                   self.bn4,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv5 = nn.Sequential(nn.Conv1d(64 * 2, 64, kernel_size=1, bias=False),
+                                   self.bn5,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv6 = nn.Sequential(nn.Conv1d(192, args.emb_dims, kernel_size=1, bias=False),
+                                   self.bn6,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.atten_cov = nn.Sequential(nn.Conv1d(args.emb_dims*args.heads, args.emb_dims, kernel_size=1, bias=False),
+                                   self.atten_bn,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv7 = nn.Sequential(nn.Conv1d(16, 64, kernel_size=1, bias=False),
+                                   self.bn7,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv8 = nn.Sequential(nn.Conv1d(1280, 256, kernel_size=1, bias=False),
+                                   self.bn8,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.dp1 = nn.Dropout(p=args.dropout)
+        self.conv9 = nn.Sequential(nn.Conv1d(256, 256, kernel_size=1, bias=False),
+                                   self.bn9,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.dp2 = nn.Dropout(p=args.dropout)
+        self.conv10 = nn.Sequential(nn.Conv1d(256, 128, kernel_size=1, bias=False),
+                                    self.bn10,
+                                    nn.LeakyReLU(negative_slope=0.2))
+        self.conv11 = nn.Conv1d(128, self.seg_num_all, kernel_size=1, bias=False)
+
+        device = torch.device('cuda') if args.cuda else torch.device('cpu')
+        self.k_cluster = args.k_cluster
+        self.temperature = args.temperature
+        # init_clustering = torch.normal(0, 1/ np.sqrt(args.num_points), (args.num_points, args.k_cluster), requires_grad=True)
+        # self.clustering = nn.Parameter(init_clustering)
+        self.gen_clustering = nn.Conv1d(args.emb_dims, self.k_cluster, kernel_size=1)
+        self.identity_mat = torch.eye(self.k_cluster, device=device) / np.sqrt(self.k_cluster)
+
+    def spectral(self, x):
+        inner = -2*torch.matmul(x.transpose(2, 1), x)
+        xx = torch.sum(x**2, dim=1, keepdim=True)
+        adj = torch.exp((-xx - inner - xx.transpose(2, 1)) / 10)
+        deg_diag = torch.sum(adj, dim=-1)
+        deg_mat = torch.diag_embed((deg_diag + 1e-10) ** (-0.5))
+        laplacian = torch.matmul(torch.matmul(deg_mat, adj), deg_mat)
+
+        clustering = F.softmax(self.gen_clustering(x) / self.temperature, dim=1)
+        clustering = clustering.transpose(2,1).contiguous() # b, n, k
+
+        trace = lambda tensor: torch.diagonal(tensor, dim1=1, dim2=2).sum(axis=-1)
+        cut_cost = trace(torch.matmul(torch.matmul(clustering.transpose(2,1), laplacian), clustering))
+        max_cut_cost = trace(torch.matmul(torch.matmul(clustering.transpose(2,1), torch.diag_embed(deg_diag)), clustering))
+        cut_loss = -torch.mean(cut_cost / max_cut_cost)
+
+        gram = torch.matmul(clustering.transpose(2, 1), clustering) # (b, k, k)
+        gram = gram / (torch.linalg.norm(gram, dim=(1,2), ord='fro') + 1e-10).reshape(-1, 1, 1)
+        orthog_diff = gram - self.identity_mat
+        orthog_loss = torch.mean(torch.linalg.norm(orthog_diff, dim=(1,2), ord='fro'))
+
+        out = torch.matmul(x, clustering)
+        out = torch.max(out, axis=-1)[0]
+
+        return out, cut_loss + orthog_loss
+
+    def forward(self, x, l):
+        batch_size = x.size(0)
+        num_points = x.size(2)
+
+        x0 = get_graph_feature(x, k=self.k)     # (batch_size, 3, num_points) -> (batch_size, 3*2, num_points, k)
+        t = self.transform_net(x0)              # (batch_size, 3, 3)
+        x = x.transpose(2, 1)                   # (batch_size, 3, num_points) -> (batch_size, num_points, 3)
+        x = torch.bmm(x, t)                     # (batch_size, num_points, 3) * (batch_size, 3, 3) -> (batch_size, num_points, 3)
+        x = x.transpose(2, 1)                   # (batch_size, num_points, 3) -> (batch_size, 3, num_points)
+
+        x = attention(x, k=self.k)              # (batch_size, 3, num_points) -> (batch_size, 3*2, num_points)
+        x = self.conv1(x)                       # (batch_size, 3*2, num_points) -> (batch_size, 64, num_points)
+        x1 = self.conv2(x)                      # (batch_size, 64, num_points) -> (batch_size, 64, num_points)
+
+        x = attention(x1, k=self.k)             # (batch_size, 64, num_points) -> (batch_size, 64*2, num_points)
+        x = self.conv3(x)                       # (batch_size, 64*2, num_points) -> (batch_size, 64, num_points)
+        x2 = self.conv4(x)                      # (batch_size, 64, num_points) -> (batch_size, 64, num_points)
+
+        x = attention(x2, k=self.k)             # (batch_size, 64, num_points) -> (batch_size, 64*2, num_points)
+        x3 = self.conv5(x)                      # (batch_size, 64*2, num_points) -> (batch_size, 64, num_points)
+
+        x = torch.cat((x1, x2, x3), dim=1)      # (batch_size, 64*3, num_points)
+
+        x = self.conv6(x)                       # (batch_size, 64*3, num_points) -> (batch_size, emb_dims, num_points)
+        x, clustering_loss = self.spectral(x)   # (batch_size, emb_dims, num_points) -> (batch_size, emb_dims, k_cluster)
+        x = self.atten_pooling(x)               # (batch_size, emb_dims, k_cluster) -> (batch_size, emb_dims*heads)
+        x = x.view(batch_size,-1,1)             # (batch_size, emb_dims*heads) -> (batch_size, emb_dims*heads, 1)
+        x = self.atten_cov(x)                   # (batch_size, emb_dims*heads, 1) -> (batch_size, emb_dims, 1)
+
+        l = l.view(batch_size, -1, 1)           # (batch_size, num_categoties, 1)
+        l = self.conv7(l)                       # (batch_size, num_categoties, 1) -> (batch_size, 64, 1)
+
+        x = torch.cat((x, l), dim=1)            # (batch_size, 1088, 1)
+        x = x.repeat(1, 1, num_points)          # (batch_size, 1088, num_points)
+
+        x = torch.cat((x, x1, x2, x3), dim=1)   # (batch_size, 1088+64*3, num_points)
+
+        x = self.conv8(x)                       # (batch_size, 1088+64*3, num_points) -> (batch_size, 256, num_points)
+        x = self.dp1(x)
+        x = self.conv9(x)                       # (batch_size, 256, num_points) -> (batch_size, 256, num_points)
+        x = self.dp2(x)
+        x = self.conv10(x)                      # (batch_size, 256, num_points) -> (batch_size, 128, num_points)
+        x = self.conv11(x)                      # (batch_size, 128, num_points) -> (batch_size, seg_num_all, num_points)
+
+        return x, clustering_loss
+
+
 class DGCNN_semseg(nn.Module):
     def __init__(self, args):
         super(DGCNN_semseg, self).__init__()

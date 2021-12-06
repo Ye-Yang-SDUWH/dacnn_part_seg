@@ -172,7 +172,7 @@ def train(args, io):
     if args.load_model != '':
         checkpoint = torch.load(args.load_model)
         model.load_state_dict(checkpoint)
-        opt = optim.SGD(model.parameters(), lr=args.lr*10, momentum=args.momentum, weight_decay=1e-4)
+        opt = optim.SGD(model.parameters(), lr=args.lr*2, momentum=args.momentum, weight_decay=1e-4)
         print('load model:', args.load_model)
     if args.scheduler == 'cos':
         scheduler = CosineAnnealingLR(opt, args.epochs, eta_min=1e-3)

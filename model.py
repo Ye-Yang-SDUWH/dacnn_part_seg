@@ -547,7 +547,7 @@ class Mymodel_specseg(nn.Module):
         orthog_loss = torch.mean(torch.linalg.norm(orthog_diff, dim=(1,2), ord='fro'))
 
         out = torch.matmul(x, clustering)
-        out = torch.max(out, axis=-1)[0]
+        #out = torch.max(out, axis=-1)[0]
 
         return out, cut_loss + orthog_loss
 

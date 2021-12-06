@@ -446,6 +446,7 @@ if __name__ == "__main__":
                         help='visualize the model')
     parser.add_argument('--visu_format', type=str, default='ply',
                         help='file format of visualization')
+    parser.add_argument('--temperature', type=float, default=1.0)
     args = parser.parse_args()
 
     _init_()

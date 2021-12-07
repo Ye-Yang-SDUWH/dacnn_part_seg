@@ -526,14 +526,15 @@ class Mymodel_specseg(nn.Module):
         self.identity_mat = (torch.eye(self.k_cluster) / np.sqrt(self.k_cluster)).cuda()
 
     def spectral(self, x):
-        inner = -2*torch.matmul(x.transpose(2, 1), x)
-        xx = torch.sum(x**2, dim=1, keepdim=True)
+        de_x = x.detach()
+        inner = -2*torch.matmul(de_x.transpose(2, 1), de_x)
+        xx = torch.sum(de_x**2, dim=1, keepdim=True)
         adj = torch.exp((-xx - inner - xx.transpose(2, 1)) / 10)
         deg_diag = torch.sum(adj, dim=-1)
         deg_mat = torch.diag_embed((deg_diag + 1e-10) ** (-0.5))
         laplacian = torch.matmul(torch.matmul(deg_mat, adj), deg_mat)
 
-        clustering = F.softmax(self.gen_clustering(x) / self.temperature, dim=1)
+        clustering = F.softmax(self.gen_clustering(de_x) / self.temperature, dim=1)
         clustering = clustering.transpose(2,1).contiguous() # b, n, k
 
         trace = lambda tensor: torch.diagonal(tensor, dim1=1, dim2=2).sum(axis=-1)

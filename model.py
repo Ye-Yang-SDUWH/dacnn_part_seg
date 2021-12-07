@@ -548,7 +548,7 @@ class Mymodel_specseg(nn.Module):
         orthog_loss = torch.mean(torch.linalg.norm(orthog_diff, dim=(1,2), ord='fro'))
 
         out = torch.matmul(x, clustering)
-        #out = torch.max(out, axis=-1)[0]
+        out = torch.max(out, axis=-1)[0]
 
         return out, cut_loss + orthog_loss
 
@@ -577,9 +577,9 @@ class Mymodel_specseg(nn.Module):
 
         x = self.conv6(x)                       # (batch_size, 64*3, num_points) -> (batch_size, emb_dims, num_points)
         x, clustering_loss = self.spectral(x)   # (batch_size, emb_dims, num_points) -> (batch_size, emb_dims, k_cluster)
-        x = self.atten_pooling(x)               # (batch_size, emb_dims, k_cluster) -> (batch_size, emb_dims*heads)
+        #x = self.atten_pooling(x)               # (batch_size, emb_dims, k_cluster) -> (batch_size, emb_dims*heads)
         x = x.view(batch_size,-1,1)             # (batch_size, emb_dims*heads) -> (batch_size, emb_dims*heads, 1)
-        x = self.atten_cov(x)                   # (batch_size, emb_dims*heads, 1) -> (batch_size, emb_dims, 1)
+        #x = self.atten_cov(x)                   # (batch_size, emb_dims*heads, 1) -> (batch_size, emb_dims, 1)
 
         l = l.view(batch_size, -1, 1)           # (batch_size, num_categoties, 1)
         l = self.conv7(l)                       # (batch_size, num_categoties, 1) -> (batch_size, 64, 1)

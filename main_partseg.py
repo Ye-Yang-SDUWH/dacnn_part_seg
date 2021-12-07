@@ -435,7 +435,7 @@ if __name__ == "__main__":
                         help='Num of nearest neighbors to use')
     parser.add_argument('--k_cluster', type=int, default=40, metavar='N',
                         help='Num of clusters')
-    parser.add_argument('--spectral_weight', type=float, default=1.0)
+    parser.add_argument('--spectral_weight', type=float, default=0.1)
     parser.add_argument('--heads', type=int, default=4, metavar='N',
                         help='number of heads')
     parser.add_argument('--model_path', type=str, default='', metavar='N',

@@ -576,9 +576,10 @@ class Mymodel_specseg(nn.Module):
         x = torch.cat((x1, x2, x3), dim=1)      # (batch_size, 64*3, num_points)
 
         x = self.conv6(x)                       # (batch_size, 64*3, num_points) -> (batch_size, emb_dims, num_points)
-        x, clustering_loss = self.spectral(x)   # (batch_size, emb_dims, num_points) -> (batch_size, emb_dims, k_cluster)
+        x = x.max(dim=-1, keepdim=True)[0]
+        #x, clustering_loss = self.spectral(x)   # (batch_size, emb_dims, num_points) -> (batch_size, emb_dims, k_cluster)
         #x = self.atten_pooling(x)               # (batch_size, emb_dims, k_cluster) -> (batch_size, emb_dims*heads)
-        x = x.view(batch_size,-1,1)             # (batch_size, emb_dims*heads) -> (batch_size, emb_dims*heads, 1)
+        #x = x.view(batch_size,-1,1)             # (batch_size, emb_dims*heads) -> (batch_size, emb_dims*heads, 1)
         #x = self.atten_cov(x)                   # (batch_size, emb_dims*heads, 1) -> (batch_size, emb_dims, 1)
 
         l = l.view(batch_size, -1, 1)           # (batch_size, num_categoties, 1)

@@ -597,7 +597,8 @@ class Mymodel_specseg(nn.Module):
         x = self.conv10(x)                      # (batch_size, 256, num_points) -> (batch_size, 128, num_points)
         x = self.conv11(x)                      # (batch_size, 128, num_points) -> (batch_size, seg_num_all, num_points)
 
-        return x, clustering_loss
+        #return x, clustering_loss
+        return  x
 
 
 class DGCNN_semseg(nn.Module):

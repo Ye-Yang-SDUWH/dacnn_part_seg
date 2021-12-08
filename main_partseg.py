@@ -186,14 +186,14 @@ def train(args, io):
         'average_accuracy': [],
         'weighted_accuracy': [],
         "iou":[],
-        "spec_loss":[]
+        #"spec_loss":[]
     }
     test_data = {
         'loss': [],
         'average_accuracy': [],
         'weighted_accuracy': [],
         "iou":[],
-        "spec_loss":[]
+        #"spec_loss":[]
     }
     best_test_iou = 0
     for epoch in range(args.epochs):
@@ -219,10 +219,12 @@ def train(args, io):
             data = data.permute(0, 2, 1)
             batch_size = data.size()[0]
             opt.zero_grad()
-            seg_pred,spec_loss = model(data, label_one_hot)
-            train_spec_loss += spec_loss.item()*batch_size
+            #seg_pred,spec_loss = model(data, label_one_hot)
+            seg_pred = model(data, label_one_hot)
+            #train_spec_loss += spec_loss.item()*batch_size
             seg_pred = seg_pred.permute(0, 2, 1).contiguous()
-            loss = criterion(seg_pred.view(-1, seg_num_all), seg.view(-1,1).squeeze())+args.spectral_weight*spec_loss
+            #loss = criterion(seg_pred.view(-1, seg_num_all), seg.view(-1,1).squeeze())+args.spectral_weight*spec_loss
+            loss = criterion(seg_pred.view(-1, seg_num_all), seg.view(-1, 1).squeeze())
             loss.backward()
             opt.step()
             pred = seg_pred.max(dim=2)[1]               # (batch_size, num_points)
@@ -251,18 +253,18 @@ def train(args, io):
         train_pred_seg = np.concatenate(train_pred_seg, axis=0)
         train_label_seg = np.concatenate(train_label_seg)
         train_ious = calculate_shape_IoU(train_pred_seg, train_true_seg, train_label_seg, args.class_choice)
-        outstr = 'Train %d, loss: %.6f, train acc: %.6f, train avg acc: %.6f, spec loss: %.6f, train iou: %.6f' % (epoch,
+        outstr = 'Train %d, loss: %.6f, train acc: %.6f, train avg acc: %.6f,  train iou: %.6f' % (epoch,
                                                                                                   train_loss*1.0/count,
                                                                                                   train_acc,
                                                                                                   avg_per_class_acc,
-                                                                                                  train_spec_loss*1.0/count,
+                                                                                                  #train_spec_loss*1.0/count,
                                                                                                   np.mean(train_ious))
         io.cprint(outstr)
         train_data['loss'].append(train_loss*1.0/count)
         train_data['average_accuracy'].append(train_acc)
         train_data['weighted_accuracy'].append(avg_per_class_acc)
         train_data['iou'].append(np.mean(train_ious))
-        train_data['spec_loss'].append((train_spec_loss*1.0/count))
+        #train_data['spec_loss'].append((train_spec_loss*1.0/count))
         ####################
         # Test
         ####################
@@ -284,13 +286,15 @@ def train(args, io):
             data, label_one_hot, seg = data.to(device), label_one_hot.to(device), seg.to(device)
             data = data.permute(0, 2, 1)
             batch_size = data.size()[0]
-            seg_pred,spec_loss = model(data, label_one_hot)
+            #seg_pred,spec_loss = model(data, label_one_hot)
+            seg_pred = model(data, label_one_hot)
             seg_pred = seg_pred.permute(0, 2, 1).contiguous()
-            loss = criterion(seg_pred.view(-1, seg_num_all), seg.view(-1,1).squeeze())+args.spectral_weight*spec_loss
+            #loss = criterion(seg_pred.view(-1, seg_num_all), seg.view(-1,1).squeeze())+args.spectral_weight*spec_loss
+            loss = criterion(seg_pred.view(-1, seg_num_all), seg.view(-1, 1).squeeze())
             pred = seg_pred.max(dim=2)[1]
             count += batch_size
             test_loss += loss.item() * batch_size
-            test_spec_loss+=spec_loss.item()*batch_size
+            #test_spec_loss+=spec_loss.item()*batch_size
             seg_np = seg.cpu().numpy()
             pred_np = pred.detach().cpu().numpy()
             test_true_cls.append(seg_np.reshape(-1))
@@ -306,17 +310,17 @@ def train(args, io):
         test_pred_seg = np.concatenate(test_pred_seg, axis=0)
         test_label_seg = np.concatenate(test_label_seg)
         test_ious = calculate_shape_IoU(test_pred_seg, test_true_seg, test_label_seg, args.class_choice)
-        outstr = 'Test %d, loss: %.6f, test acc: %.6f, test avg acc: %.6f, spec loss: %.6f, test iou: %.6f' % (epoch,
+        outstr = 'Test %d, loss: %.6f, test acc: %.6f, test avg acc: %.6f,  test iou: %.6f' % (epoch,
                                                                                               test_loss*1.0/count,
                                                                                               test_acc,
                                                                                               avg_per_class_acc,
-                                                                                              train_spec_loss * 1.0 / count,
+                                                                                              #test_spec_loss * 1.0 / count,
                                                                                               np.mean(test_ious))
         test_data['loss'].append(test_loss * 1.0 / count)
         test_data['average_accuracy'].append(test_acc)
         test_data['weighted_accuracy'].append(avg_per_class_acc)
         test_data['iou'].append(np.mean(test_ious))
-        test_data['spec_loss'].append(train_spec_loss * 1.0 / count)
+        #test_data['spec_loss'].append(train_spec_loss * 1.0 / count)
         io.cprint(outstr)
         if np.mean(test_ious) >= best_test_iou:
             best_test_iou = np.mean(test_ious)

@@ -442,8 +442,8 @@ if __name__ == "__main__":
     parser.add_argument('--spectral_weight', type=float, default=0.1)
     parser.add_argument('--heads', type=int, default=4, metavar='N',
                         help='number of heads')
-    parser.add_argument('--model_path', type=str, default='', metavar='N',
-                        help='/home/yanye/dganet_part_seg/outputs/sgd_32_1_spec_spgpu_0.1/models/model.t7')
+    parser.add_argument('--model_path', type=str, default='/home/yanye/dganet_part_seg/outputs/sgd_32_1_spec_spgpu_0.1/models/model.t7', metavar='N',
+                        help='')
     parser.add_argument('--load_model', type=str, default='', metavar='N',
                         help='continue to train')
     parser.add_argument('--visu', type=str, default='all',

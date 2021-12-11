@@ -397,7 +397,7 @@ def test(args, io):
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser(description='Point Cloud Part Segmentation')
-    parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
+    parser.add_argument('--exp_name', type=str, default='partseg_eval', metavar='N',
                         help='Name of the experiment')
     parser.add_argument('--model', type=str, default='Mymodel_seg', metavar='N',
                         choices=['Mymodel_seg'],
@@ -427,7 +427,7 @@ if __name__ == "__main__":
                         help='enables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--eval', type=bool,  default=False,
+    parser.add_argument('--eval', type=bool,  default=True,
                         help='evaluate the model')
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points to use')
@@ -443,7 +443,7 @@ if __name__ == "__main__":
     parser.add_argument('--heads', type=int, default=4, metavar='N',
                         help='number of heads')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
-                        help='Pretrained model path')
+                        help='/home/yanye/dganet_part_seg/outputs/sgd_32_1_spec_spgpu_0.1/models/model.t7')
     parser.add_argument('--load_model', type=str, default='', metavar='N',
                         help='continue to train')
     parser.add_argument('--visu', type=str, default='',

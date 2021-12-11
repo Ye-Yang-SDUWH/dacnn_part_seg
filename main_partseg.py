@@ -446,7 +446,7 @@ if __name__ == "__main__":
                         help='/home/yanye/dganet_part_seg/outputs/sgd_32_1_spec_spgpu_0.1/models/model.t7')
     parser.add_argument('--load_model', type=str, default='', metavar='N',
                         help='continue to train')
-    parser.add_argument('--visu', type=str, default='',
+    parser.add_argument('--visu', type=str, default='all',
                         help='visualize the model')
     parser.add_argument('--visu_format', type=str, default='ply',
                         help='file format of visualization')
